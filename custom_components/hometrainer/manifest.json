@@ -1,0 +1,14 @@
+{
+  "domain": "hometrainer",
+  "name": "HomeTrainer To Home Assistant",
+  "after_dependencies": ["cloud"],
+  "codeowners": ["@lobwick"],
+  "config_flow": true,
+  "dependencies": ["webhook"],
+  "documentation": "https://github.com/lobwick/hometrainer-to-home-assistant-integration",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/lobwick/hometrainer-to-home-assistant-integration/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

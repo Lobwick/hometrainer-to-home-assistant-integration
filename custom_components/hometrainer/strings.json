@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a home trainer",
+        "description": "The iOS app will send the trainer's data to Home Assistant. The FTP is used to compute power zones; you can change it later.",
+        "data": {
+          "name": "Name",
+          "ftp": "FTP"
+        }
+      }
+    },
+    "create_entry": {
+      "default": "Home trainer added ✅\n\nPaste one of these addresses in the iOS app (Settings → Webhook address):\n\n- **Local network**: `{local_url}`\n- **From the Internet**: `{external_url}`\n\nYou can find them again with the integration's Configure button."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Advanced settings",
+        "description": "Webhook addresses for the iOS app:\n\n- **Local network**: `{local_url}`\n- **From the Internet**: `{external_url}`\n\nZone thresholds as % of FTP (lower bound of each zone, Zwift split by default). FTP, on-bike delay and colours are set on the device page.",
+        "data": {
+          "zone_2": "Zone 2 start",
+          "zone_3": "Zone 3 start",
+          "zone_4": "Zone 4 start",
+          "zone_5": "Zone 5 start",
+          "zone_6": "Zone 6 start",
+          "stale_timeout": "Disconnected after"
+        },
+        "data_description": {
+          "stale_timeout": "With no data for this long, power, cadence and speed drop to 0."
+        }
+      }
+    },
+    "error": {
+      "thresholds_order": "Thresholds must be increasing and all different."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "power": {
+        "name": "Power"
+      },
+      "power_avg": {
+        "name": "Power 3s"
+      },
+      "cadence": {
+        "name": "Cadence"
+      },
+      "speed": {
+        "name": "Speed"
+      },
+      "heart_rate": {
+        "name": "Heart rate"
+      },
+      "distance": {
+        "name": "Distance"
+      },
+      "energy": {
+        "name": "Energy"
+      },
+      "ftp_percent": {
+        "name": "FTP percent"
+      },
+      "zone": {
+        "name": "Power zone",
+        "state_attributes": {
+          "zone_name": {
+            "name": "Zone name"
+          },
+          "hex_color": {
+            "name": "Colour"
+          },
+          "rgb_color": {
+            "name": "RGB colour"
+          },
+          "ftp_percent": {
+            "name": "% FTP"
+          },
+          "power_min": {
+            "name": "Min power"
+          },
+          "power_max": {
+            "name": "Max power"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "on_bike": {
+        "name": "On bike",
+        "state_attributes": {
+          "last_pedaling": {
+            "name": "Last pedaling"
+          },
+          "until": {
+            "name": "Until"
+          },
+          "delay_minutes": {
+            "name": "Delay"
+          }
+        }
+      },
+      "connected": {
+        "name": "App connected"
+      }
+    },
+    "number": {
+      "ftp": {
+        "name": "FTP"
+      },
+      "on_bike_delay": {
+        "name": "On-bike delay"
+      }
+    },
+    "text": {
+      "zone_color": {
+        "name": "Zone {zone} colour"
+      }
+    }
+  }
+}
