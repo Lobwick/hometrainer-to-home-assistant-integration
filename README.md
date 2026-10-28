@@ -1,3 +1,5 @@
+<p align="center"><img src="custom_components/hometrainer/brand/icon@2x.png" width="128" alt="Logo HomeTrainer To Home Assistant"></p>
+
 # HomeTrainer To Home Assistant — intégration Home Assistant
 
 Intégration Home Assistant pour un home trainer connecté (Wahoo KICKR, ou tout
