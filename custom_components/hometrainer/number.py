@@ -18,7 +18,13 @@ async def async_setup_entry(
 ) -> None:
     """Ajoute les réglages numériques."""
     trainer = entry.runtime_data
-    async_add_entities([FtpNumber(entry, trainer, "ftp"), DelayNumber(entry, trainer, "on_bike_delay")])
+    async_add_entities(
+        [
+            FtpNumber(entry, trainer, "ftp"),
+            DelayNumber(entry, trainer, "on_bike_delay"),
+            MinPedalingNumber(entry, trainer, "on_bike_min_pedaling"),
+        ]
+    )
 
 
 class FtpNumber(HomeTrainerEntity, NumberEntity):
@@ -61,3 +67,24 @@ class DelayNumber(HomeTrainerEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Nouveau délai."""
         self.trainer.update_settings(on_bike_delay=int(value))
+
+
+class MinPedalingNumber(HomeTrainerEntity, NumberEntity):
+    """Pédalage continu nécessaire avant de passer « sur le vélo »."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:timer-play-outline"
+    _attr_mode = NumberMode.BOX
+    _attr_native_min_value = 0
+    _attr_native_max_value = 60
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> float:
+        """Pédalage minimum actuel."""
+        return self.trainer.settings.on_bike_min_pedaling
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Nouveau pédalage minimum."""
+        self.trainer.update_settings(on_bike_min_pedaling=int(value))

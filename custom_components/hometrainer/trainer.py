@@ -15,14 +15,17 @@ from typing import Any
 from .const import (
     DEFAULT_FTP,
     DEFAULT_ON_BIKE_DELAY,
+    DEFAULT_ON_BIKE_MIN_PEDALING,
     DEFAULT_STALE_TIMEOUT,
     DEFAULT_ZONE_COLORS,
     DEFAULT_ZONE_THRESHOLDS,
     OPT_FTP,
     OPT_ON_BIKE_DELAY,
+    OPT_ON_BIKE_MIN_PEDALING,
     OPT_STALE_TIMEOUT,
     OPT_ZONE_COLORS,
     OPT_ZONE_THRESHOLDS,
+    PEDALING_PAUSE_TOLERANCE,
     POWER_AVERAGE_WINDOW,
     ZONE_COUNT,
     ZONE_NAMES,
@@ -48,6 +51,7 @@ class Settings:
 
     ftp: int = DEFAULT_FTP
     on_bike_delay: int = DEFAULT_ON_BIKE_DELAY  # minutes
+    on_bike_min_pedaling: int = DEFAULT_ON_BIKE_MIN_PEDALING  # minutes
     zone_colors: list[str] = field(default_factory=lambda: list(DEFAULT_ZONE_COLORS))
     zone_thresholds: list[float] = field(
         default_factory=lambda: list(DEFAULT_ZONE_THRESHOLDS)
@@ -65,6 +69,9 @@ class Settings:
         return cls(
             ftp=int(options.get(OPT_FTP, DEFAULT_FTP)),
             on_bike_delay=int(options.get(OPT_ON_BIKE_DELAY, DEFAULT_ON_BIKE_DELAY)),
+            on_bike_min_pedaling=int(
+                options.get(OPT_ON_BIKE_MIN_PEDALING, DEFAULT_ON_BIKE_MIN_PEDALING)
+            ),
             zone_colors=colors,
             zone_thresholds=sorted(float(t) for t in thresholds),
             stale_timeout=int(options.get(OPT_STALE_TIMEOUT, DEFAULT_STALE_TIMEOUT)),
@@ -75,6 +82,7 @@ class Settings:
         return {
             OPT_FTP: self.ftp,
             OPT_ON_BIKE_DELAY: self.on_bike_delay,
+            OPT_ON_BIKE_MIN_PEDALING: self.on_bike_min_pedaling,
             OPT_ZONE_COLORS: list(self.zone_colors),
             OPT_ZONE_THRESHOLDS: list(self.zone_thresholds),
             OPT_STALE_TIMEOUT: self.stale_timeout,
@@ -97,6 +105,10 @@ class Trainer:
         self._power_window: deque[tuple[datetime, float]] = deque()
         self.last_data: datetime | None = None
         self.last_pedaling: datetime | None = None
+        # Début de la série de pédalage en cours (pauses courtes tolérées).
+        self.pedaling_since: datetime | None = None
+        # Moment où la séance a été validée (pédalage minimum atteint).
+        self.session_started: datetime | None = None
         self.device_name: str | None = None
         self._listeners: list[Callable[[], None]] = []
         self._snapshot: tuple[Any, ...] | None = None
@@ -133,6 +145,7 @@ class Trainer:
         """Appelé chaque seconde : prévient les entités si un état a changé tout seul
         (fin de la fenêtre de lissage, perte de connexion, fin du délai « sur le vélo »)."""
         self._prune_window()
+        self._end_expired_session(self._now())
         if self._state_snapshot() != self._snapshot:
             self._notify()
 
@@ -150,9 +163,36 @@ class Trainer:
         if power is not None:
             self._power_window.append((now, power))
             if power > 0:
+                self._end_expired_session(now)
+                if self.last_pedaling is None or now - self.last_pedaling > timedelta(
+                    seconds=PEDALING_PAUSE_TOLERANCE
+                ):
+                    self.pedaling_since = now
                 self.last_pedaling = now
+        self._update_session()
         self._prune_window()
         self._notify()
+
+    def _end_expired_session(self, now: datetime) -> None:
+        """Oublie la séance précédente une fois le délai « sur le vélo » écoulé."""
+        if (
+            self.session_started is not None
+            and self.last_pedaling is not None
+            and now - self.last_pedaling
+            > timedelta(minutes=self.settings.on_bike_delay)
+        ):
+            self.session_started = None
+
+    def _update_session(self) -> None:
+        """Valide la séance dès que le pédalage continu atteint le minimum réglé."""
+        if (
+            self.session_started is None
+            and self.pedaling_since is not None
+            and self.last_pedaling is not None
+            and self.last_pedaling - self.pedaling_since
+            >= timedelta(minutes=self.settings.on_bike_min_pedaling)
+        ):
+            self.session_started = self.last_pedaling
 
     def _prune_window(self) -> None:
         limit = self._now() - timedelta(seconds=POWER_AVERAGE_WINDOW)
@@ -234,8 +274,9 @@ class Trainer:
 
     @property
     def on_bike(self) -> bool:
-        """Vrai pendant le pédalage et jusqu'au délai configuré après le dernier coup de pédale."""
-        if self.last_pedaling is None:
+        """Vrai une fois le pédalage minimum atteint, puis jusqu'au délai configuré
+        après le dernier coup de pédale."""
+        if self.session_started is None or self.last_pedaling is None:
             return False
         if self.connected and (self._metrics["power"] or 0) > 0:
             return True
@@ -246,7 +287,7 @@ class Trainer:
     @property
     def on_bike_until(self) -> datetime | None:
         """Heure à laquelle « sur le vélo » repassera à faux si le pédalage ne reprend pas."""
-        if self.last_pedaling is None:
+        if self.session_started is None or self.last_pedaling is None:
             return None
         return self.last_pedaling + timedelta(minutes=self.settings.on_bike_delay)
 
@@ -255,6 +296,7 @@ class Trainer:
         """Modifie des réglages, les enregistre et rafraîchit les entités."""
         for key, value in changes.items():
             setattr(self.settings, key, value)
+        self._update_session()
         if self._on_settings_changed:
             self._on_settings_changed(self.settings)
         self._notify()

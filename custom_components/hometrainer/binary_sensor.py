@@ -45,10 +45,13 @@ class OnBikeSensor(HomeTrainerEntity, BinarySensorEntity):
         """Dernier coup de pédale et fin prévue."""
         until = self.trainer.on_bike_until
         last = self.trainer.last_pedaling
+        since = self.trainer.pedaling_since
         return {
+            "pedaling_since": since.isoformat() if since else None,
             "last_pedaling": last.isoformat() if last else None,
             "until": until.isoformat() if until else None,
             "delay_minutes": self.trainer.settings.on_bike_delay,
+            "min_pedaling_minutes": self.trainer.settings.on_bike_min_pedaling,
         }
 
 

@@ -70,7 +70,7 @@ def test_power_average_window():
 
 
 def test_disconnect_zeroes_power_but_keeps_on_bike():
-    t, clock, _ = make(on_bike_delay=20, stale_timeout=5)
+    t, clock, _ = make(on_bike_delay=20, on_bike_min_pedaling=0, stale_timeout=5)
     t.handle_data({"power": 250, "cadence": 90, "speed": 35.2, "heart_rate": 150, "distance": 1200})
     assert t.on_bike and t.connected
     clock.advance(seconds=6)
@@ -86,7 +86,7 @@ def test_disconnect_zeroes_power_but_keeps_on_bike():
 
 
 def test_on_bike_delay_counts_from_last_pedaling():
-    t, clock, _ = make(on_bike_delay=10)
+    t, clock, _ = make(on_bike_delay=10, on_bike_min_pedaling=0)
     t.handle_data({"power": 200})
     clock.advance(minutes=2)
     t.handle_data({"power": 0})  # arrêt de pédalage, l'app envoie toujours
@@ -147,3 +147,74 @@ def test_settings_from_options_tolerates_partial():
 
 def test_hex_to_rgb():
     assert hex_to_rgb("#0078FF") == [0, 120, 255]
+
+
+def ride(t, clock, seconds, power=200):
+    """Pédale pendant ``seconds`` secondes (un envoi par seconde)."""
+    for _ in range(seconds):
+        t.handle_data({"power": power})
+        clock.advance(seconds=1)
+
+
+def test_short_test_does_not_start_session():
+    t, clock, _ = make(on_bike_delay=20, on_bike_min_pedaling=5)
+    ride(t, clock, 60)  # 1 min de test
+    assert not t.on_bike
+    assert t.on_bike_until is None
+    clock.advance(minutes=2)
+    t.tick()
+    assert not t.on_bike
+
+
+def test_session_starts_after_min_pedaling():
+    t, clock, _ = make(on_bike_delay=20, on_bike_min_pedaling=5)
+    ride(t, clock, 4 * 60 + 50)
+    assert not t.on_bike
+    ride(t, clock, 15)
+    assert t.on_bike
+    # arrêt : reste sur le vélo pendant le délai
+    clock.advance(minutes=19)
+    t.tick()
+    assert t.on_bike
+    clock.advance(minutes=2)
+    t.tick()
+    assert not t.on_bike
+
+
+def test_short_pauses_do_not_reset_pedaling():
+    t, clock, _ = make(on_bike_min_pedaling=5)
+    for _ in range(5):
+        ride(t, clock, 50)
+        ride(t, clock, 20, power=0)  # pause de 20 s (< 30 s tolérées)
+    ride(t, clock, 10)
+    assert t.on_bike
+
+
+def test_long_pause_restarts_count():
+    t, clock, _ = make(on_bike_min_pedaling=5)
+    ride(t, clock, 3 * 60)
+    ride(t, clock, 60, power=0)  # pause d'1 min : la série repart de zéro
+    ride(t, clock, 3 * 60)
+    assert not t.on_bike
+    ride(t, clock, 2 * 60 + 5)
+    assert t.on_bike
+
+
+def test_new_session_needs_min_pedaling_again():
+    t, clock, _ = make(on_bike_delay=10, on_bike_min_pedaling=5)
+    ride(t, clock, 6 * 60)
+    assert t.on_bike
+    clock.advance(minutes=30)
+    t.tick()
+    assert not t.on_bike
+    ride(t, clock, 60)  # nouveau coup de pédale bien plus tard : pas encore une séance
+    assert not t.on_bike
+
+
+def test_lowering_min_pedaling_applies_immediately():
+    t, clock, saved = make(on_bike_min_pedaling=5)
+    ride(t, clock, 90)
+    assert not t.on_bike
+    t.update_settings(on_bike_min_pedaling=1)
+    assert t.on_bike
+    assert saved[-1].on_bike_min_pedaling == 1

@@ -48,6 +48,9 @@ async def test_full_flow(hass: HomeAssistant, hass_client_no_auth, freezer) -> N
     assert (await resp.json())["ok"] is True
     assert hass.states.get(f"binary_sensor.{PREFIX}_app_connected").state == "off"
 
+    # pédalage minimum par défaut : 5 min, un seul envoi ne suffit pas
+    assert hass.states.get(f"number.{PREFIX}_minimum_pedaling").state == "5"
+    await hass.services.async_call("number", "set_value", {"entity_id": f"number.{PREFIX}_minimum_pedaling", "value": 0}, blocking=True)
     resp = await client.post(url, json={"power": 260, "cadence": 92, "speed": 36.4, "heart_rate": 151, "device": "KICKR CORE"})
     assert resp.status == 200
     body = await resp.json()

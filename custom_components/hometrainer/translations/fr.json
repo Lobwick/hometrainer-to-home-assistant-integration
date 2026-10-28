@@ -98,6 +98,12 @@
           },
           "delay_minutes": {
             "name": "Délai"
+          },
+          "pedaling_since": {
+            "name": "Pédale depuis"
+          },
+          "min_pedaling_minutes": {
+            "name": "Pédalage minimum"
           }
         }
       },
@@ -111,6 +117,9 @@
       },
       "on_bike_delay": {
         "name": "Délai « sur le vélo »"
+      },
+      "on_bike_min_pedaling": {
+        "name": "Pédalage minimum"
       }
     },
     "text": {

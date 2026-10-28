@@ -98,6 +98,12 @@
           },
           "delay_minutes": {
             "name": "Delay"
+          },
+          "pedaling_since": {
+            "name": "Pedaling since"
+          },
+          "min_pedaling_minutes": {
+            "name": "Minimum pedaling"
           }
         }
       },
@@ -111,6 +117,9 @@
       },
       "on_bike_delay": {
         "name": "On-bike delay"
+      },
+      "on_bike_min_pedaling": {
+        "name": "Minimum pedaling"
       }
     },
     "text": {

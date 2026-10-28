@@ -23,10 +23,11 @@ L'app iOS compagnon : [hometrainer-to-home-assistant](https://github.com/lobwick
 | `sensor.<nom>_energy` | Énergie de la séance (kcal) |
 | `sensor.<nom>_ftp_percent` | Puissance lissée en % de la FTP |
 | `sensor.<nom>_power_zone` | Zone 0 (arrêt) à 6, attributs `zone_name`, `hex_color`, `rgb_color`, `power_min`, `power_max` |
-| `binary_sensor.<nom>_on_bike` | Sur le vélo : pendant le pédalage et jusqu'au délai réglé après le dernier coup de pédale |
+| `binary_sensor.<nom>_on_bike` | Sur le vélo : après le pédalage minimum (5 min par défaut, pauses de moins de 30 s tolérées), puis jusqu'au délai réglé après le dernier coup de pédale |
 | `binary_sensor.<nom>_app_connected` | L'app envoie des données (diagnostic) |
 | `number.<nom>_ftp` | FTP (réglage) |
 | `number.<nom>_on_bike_delay` | Délai « sur le vélo » en minutes (réglage) |
+| `number.<nom>_minimum_pedaling` | Pédalage continu nécessaire avant de passer « sur le vélo », en minutes (réglage, 0 = immédiat) |
 | `text.<nom>_zone_N_colour` | Couleur de la zone N au format `#RRGGBB` (réglage) |
 
 Sans données pendant 5 s (réglable), puissance, cadence et vitesse repassent à 0
